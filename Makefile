@@ -10,6 +10,7 @@ web:
 fmt:
 	gofmt -w cmd internal
 check:
+	npm run format:check
 	test -z "$$(gofmt -l cmd internal)"
 	go vet ./...
 	go test -race ./...
