@@ -18,7 +18,7 @@ try {
     const port = socket.address().port;
     await new Promise((resolve, reject) => socket.close(err => err ? reject(err) : resolve()));
     const base = `http://127.0.0.1:${port}`;
-    const child = spawn(binary, [], { env: { ...process.env, APP_ENV:"test", HTTP_ADDR:`127.0.0.1:${port}` }, stdio:"ignore" });
+    const child = spawn(binary, [], { env: { ...process.env, APP_ENV:"test", DATABASE_URL:"", OIDC_ISSUER:"", OIDC_CLIENT_ID:"", PUBLIC_ORIGIN:"", HTTP_ADDR:`127.0.0.1:${port}` }, stdio:"ignore" });
     const exited = once(child, "exit");
     try {
       let healthy = false;

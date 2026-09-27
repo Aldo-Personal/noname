@@ -26,4 +26,5 @@ key, authenticate a request, rotate/revoke the key, and see revocation take effe
 Paid billing, blockchain submission, embedded wallets, durable jobs and public deployment.
 
 ## Tracking
-Issue creation is pending GitHub CLI authentication. Branch: codex/ethereum-project-access.
+GitHub: https://github.com/Aldo-Personal/noname/issues/7
+Branch: codex/ethereum-project-access.
