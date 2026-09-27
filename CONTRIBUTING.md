@@ -26,3 +26,8 @@ Install repository hooks with `git config core.hooksPath .githooks`. Hooks rejec
 commits and pushes to main. These are local safeguards, not a replacement for GitHub
 branch protection. Create a tracking issue before implementation when GitHub access
 is available; otherwise save its exact draft in docs/issues and report the blocker.
+
+GitHub main protection was configured for issue #7: PR required, verify check required
+with an up-to-date branch, conversations resolved, linear history, administrator
+enforcement, and no force pushes/deletion. Required independent approval count is zero
+for the current solo-maintainer workflow; raise it when another reviewer joins.

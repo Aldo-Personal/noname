@@ -106,7 +106,9 @@ retention jobs remain future work.
 
 Never commit or push directly to main. Use dev or codex/* branches, create tracking
 issues, and commit coherent verified milestones. Local hooks enforce the main restriction;
-GitHub rulesets must also be configured by the repository owner. Current milestone:
+GitHub main protection requires a PR, up-to-date passing verify CI, resolved conversations,
+and linear history; administrators are included. Force pushes/deletion are disabled.
+Independent approvals are currently optional for the solo-maintainer workflow. Current milestone:
 https://github.com/Aldo-Personal/noname/issues/7.
 
 The local Go module path and private npm scope are placeholders for future publishing.
