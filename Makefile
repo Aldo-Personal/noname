@@ -1,4 +1,4 @@
-.PHONY: api gateway worker fmt check test build web infra-up infra-down smoke
+.PHONY: api gateway worker fmt check test build web infra-up infra-down smoke migrate integration
 api:
 	go run ./cmd/api
 gateway:
@@ -34,3 +34,9 @@ infra-down:
 smoke:
 	npm run build -w @infra/sdk
 	node scripts/smoke.mjs
+
+migrate:
+	go run ./cmd/migrate
+integration:
+	test -n "$$TEST_DATABASE_URL"
+	go test -race -count=1 ./internal/access ./internal/platform/database

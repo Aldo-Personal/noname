@@ -1,6 +1,6 @@
 # Architecture
 
-Status: executable development foundation; product modules are planned.
+Status: Ethereum project access implemented; RPC forwarding, billing and jobs are planned.
 
 ```text
 React dashboard -> TypeScript SDK -> API
@@ -12,12 +12,13 @@ API owns the control plane. Gateway owns authenticated, metered provider access.
 Workers own asynchronous delivery and reconciliation. Separate binaries allow
 independent scaling while keeping one codebase. No broker is selected yet.
 
-Planned capabilities: identity/projects, contracts, transactions, events/webhooks,
+Implemented: OIDC sessions, personal organizations, Ethereum projects and API-key lifecycle.
+Planned capabilities: team membership, contracts, transactions, events/webhooks,
 usage, billing. Each owns its writes; no module may bypass another's invariants.
 Usage is durable accounting input, not just a metrics counter. Redis is optional
 ephemeral infrastructure, never the sole authority for balances or billing.
 
-Start with an authenticated project/API-key vertical slice and tenant-isolation tests.
+The authenticated project/API-key slice includes PostgreSQL tenant-isolation tests.
 Then select the queue and implement outbox delivery before adding background side effects.
 Add one explicitly supported EVM provider adapter with method restrictions and budgets.
 Choose actual launch networks and provider commercial arrangements before forwarding.

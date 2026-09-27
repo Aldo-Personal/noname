@@ -17,6 +17,9 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+
+	"infra.local/platform/internal/access"
+	"infra.local/platform/internal/platform/database"
 )
 
 // Version is overridden at release build time.
@@ -36,20 +39,37 @@ func JSON(w http.ResponseWriter, code int, value any) {
 	}
 }
 
-// Handler exposes only scaffold diagnostics. No product operations are enabled.
+// Handler exposes scaffold diagnostics; Run mounts access routes when configured.
 func Handler(service string, ready *atomic.Bool) http.Handler {
+	return handlerWithAccess(service, ready, nil, nil)
+}
+
+func handlerWithAccess(service string, ready *atomic.Bool, routes http.Handler, dependencyReady func(context.Context) error) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		JSON(w, http.StatusOK, map[string]string{"status": "alive"})
 	})
 	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, r *http.Request) {
-		if !ready.Load() {
+		dependencyOK := true
+		if dependencyReady != nil {
+			ctx, cancel := context.WithTimeout(r.Context(), time.Second)
+			dependencyOK = dependencyReady(ctx) == nil
+			cancel()
+		}
+		if !ready.Load() || !dependencyOK {
 			JSON(w, http.StatusServiceUnavailable, map[string]string{"status": "not_ready"})
 			return
 		}
 		JSON(w, http.StatusOK, map[string]string{"status": "ready"})
 	})
 	if service == "api" {
+		if routes == nil {
+			routes = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				JSON(w, 503, map[string]string{"code": "access_not_configured"})
+			})
+		}
+		mux.Handle("/auth/", routes)
+		mux.Handle("/v1/", routes)
 		mux.HandleFunc("GET /v1/status", func(w http.ResponseWriter, r *http.Request) {
 			JSON(w, http.StatusOK, Status{Service: service, Version: Version, Mode: "scaffold"})
 		})
@@ -105,10 +125,39 @@ func Run(service string) error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	var routes http.Handler
+	var dependencyReady func(context.Context) error
+	if service == "api" {
+		databaseURL := os.Getenv("DATABASE_URL")
+		issuer := os.Getenv("OIDC_ISSUER")
+		clientID := os.Getenv("OIDC_CLIENT_ID")
+		origin := os.Getenv("PUBLIC_ORIGIN")
+		if databaseURL != "" || issuer != "" || clientID != "" || origin != "" {
+			if databaseURL == "" || issuer == "" || clientID == "" || origin == "" {
+				return fmt.Errorf("DATABASE_URL, OIDC_ISSUER, OIDC_CLIENT_ID and PUBLIC_ORIGIN are all required for access")
+			}
+			startup, cancel := context.WithTimeout(ctx, 20*time.Second)
+			defer cancel()
+			pool, err := database.Open(startup, databaseURL)
+			if err != nil {
+				return err
+			}
+			defer pool.Close()
+			if err := database.Check(startup, pool); err != nil {
+				return err
+			}
+			app, err := access.New(startup, &access.Store{Pool: pool}, access.Config{Issuer: issuer, ClientID: clientID, ClientSecret: os.Getenv("OIDC_CLIENT_SECRET"), Origin: origin})
+			if err != nil {
+				return err
+			}
+			routes = app.Routes()
+			dependencyReady = pool.Ping
+		}
+	}
 	var ready atomic.Bool
 	// The worker has no durable queue adapter yet and must not advertise readiness.
 	ready.Store(service != "worker")
-	srv := &http.Server{Addr: addr, Handler: Handler(service, &ready), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 32 << 10}
+	srv := &http.Server{Addr: addr, Handler: handlerWithAccess(service, &ready, routes, dependencyReady), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 32 << 10}
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return fmt.Errorf("listen: %w", err)
