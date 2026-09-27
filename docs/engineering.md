@@ -14,7 +14,7 @@ Go: gofmt, explicit errors, context propagation, external-call deadlines, bounde
 concurrency, owned goroutine lifetimes, graceful shutdown, explicit dependencies.
 No mutable global business state or panic for normal failures. Runtime configuration
 must validate at startup. The release-version variable is build metadata only.
-TypeScript: strict mode, unknown at external boundaries, runtime validation, no
+TypeScript: Prettier enforced by make check; use npm run format. Strict mode, unknown at external boundaries, runtime validation, no
 unexplained any/ts-ignore. Browser code must never receive backend credentials.
 Use integer minor units or appropriate decimals for money and exact integers for
 chain amounts. No floats for financial calculations. SQL must be parameterized.

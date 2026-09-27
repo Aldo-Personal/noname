@@ -1,21 +1,514 @@
+---
 openapi: 3.1.0
 info:
   title: Infra API
   version: 0.1.0
+  description: Development Ethereum access milestone. Keys authorize only key-check;
+    RPC forwarding remains disabled.
 paths:
-  /v1/status:
+  "/v1/status":
     get:
       operationId: getStatus
-      summary: Scaffold API status; not a production readiness guarantee
+      security: []
       responses:
         '200':
-          description: Status
+          description: Success
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Status"
+        '400':
+          "$ref": "#/components/responses/BadRequest"
+        '401':
+          "$ref": "#/components/responses/Unauthenticated"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '503':
+          "$ref": "#/components/responses/Unavailable"
+  "/v1/me":
+    get:
+      operationId: getCurrentUser
+      security:
+      - session: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Principal"
+        '400':
+          "$ref": "#/components/responses/BadRequest"
+        '401':
+          "$ref": "#/components/responses/Unauthenticated"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '503':
+          "$ref": "#/components/responses/Unavailable"
+  "/v1/projects":
+    get:
+      operationId: listProjects
+      security:
+      - session: []
+      responses:
+        '200':
+          description: Success
           content:
             application/json:
               schema:
                 type: object
-                required: [service, version, mode]
+                required:
+                - projects
                 properties:
-                  service: {type: string, const: api}
-                  version: {type: string}
-                  mode: {type: string, const: scaffold}
+                  projects:
+                    type: array
+                    maxItems: 100
+                    items:
+                      "$ref": "#/components/schemas/Project"
+        '400':
+          "$ref": "#/components/responses/BadRequest"
+        '401':
+          "$ref": "#/components/responses/Unauthenticated"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '503':
+          "$ref": "#/components/responses/Unavailable"
+    post:
+      operationId: createProject
+      security:
+      - session: []
+      responses:
+        '201':
+          description: Success
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Project"
+        '400':
+          "$ref": "#/components/responses/BadRequest"
+        '401':
+          "$ref": "#/components/responses/Unauthenticated"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '503':
+          "$ref": "#/components/responses/Unavailable"
+      parameters:
+      - name: Origin
+        in: header
+        required: true
+        schema:
+          type: string
+        description: Must equal configured PUBLIC_ORIGIN. Browsers supply this header.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/NameInput"
+  "/v1/projects/{project}/keys":
+    get:
+      operationId: listKeys
+      security:
+      - session: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - keys
+                properties:
+                  keys:
+                    type: array
+                    maxItems: 100
+                    items:
+                      "$ref": "#/components/schemas/Key"
+        '400':
+          "$ref": "#/components/responses/BadRequest"
+        '401':
+          "$ref": "#/components/responses/Unauthenticated"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '503':
+          "$ref": "#/components/responses/Unavailable"
+      parameters:
+      - name: project
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      operationId: issueKey
+      security:
+      - session: []
+      responses:
+        '201':
+          description: Success
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/IssuedKey"
+        '400':
+          "$ref": "#/components/responses/BadRequest"
+        '401':
+          "$ref": "#/components/responses/Unauthenticated"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '503':
+          "$ref": "#/components/responses/Unavailable"
+      parameters:
+      - name: project
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: Origin
+        in: header
+        required: true
+        schema:
+          type: string
+        description: Must equal configured PUBLIC_ORIGIN. Browsers supply this header.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/NameInput"
+  "/v1/projects/{project}/keys/{key}":
+    delete:
+      operationId: revokeKey
+      security:
+      - session: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/OK"
+        '400':
+          "$ref": "#/components/responses/BadRequest"
+        '401':
+          "$ref": "#/components/responses/Unauthenticated"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '503':
+          "$ref": "#/components/responses/Unavailable"
+      parameters:
+      - name: project
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: Origin
+        in: header
+        required: true
+        schema:
+          type: string
+        description: Must equal configured PUBLIC_ORIGIN. Browsers supply this header.
+  "/v1/projects/{project}/keys/{key}/rotate":
+    post:
+      operationId: rotateKey
+      security:
+      - session: []
+      responses:
+        '201':
+          description: Success
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/IssuedKey"
+        '400':
+          "$ref": "#/components/responses/BadRequest"
+        '401':
+          "$ref": "#/components/responses/Unauthenticated"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '503':
+          "$ref": "#/components/responses/Unavailable"
+      parameters:
+      - name: project
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: Origin
+        in: header
+        required: true
+        schema:
+          type: string
+        description: Must equal configured PUBLIC_ORIGIN. Browsers supply this header.
+  "/v1/key-check":
+    get:
+      operationId: checkKey
+      security:
+      - apiKey: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/KeyIdentity"
+        '400':
+          "$ref": "#/components/responses/BadRequest"
+        '401':
+          "$ref": "#/components/responses/Unauthenticated"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '503':
+          "$ref": "#/components/responses/Unavailable"
+  "/auth/logout":
+    post:
+      operationId: logout
+      security:
+      - session: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/OK"
+        '400':
+          "$ref": "#/components/responses/BadRequest"
+        '401':
+          "$ref": "#/components/responses/Unauthenticated"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '503':
+          "$ref": "#/components/responses/Unavailable"
+      parameters:
+      - name: Origin
+        in: header
+        required: true
+        schema:
+          type: string
+        description: Must equal configured PUBLIC_ORIGIN. Browsers supply this header.
+  "/auth/login":
+    get:
+      operationId: beginLogin
+      responses:
+        '302':
+          description: OIDC provider redirect or successful application redirect
+        '400':
+          description: Invalid/expired state or denied login
+        '401':
+          description: Invalid identity
+        '503':
+          description: Dependency unavailable
+  "/auth/callback":
+    get:
+      operationId: finishLogin
+      responses:
+        '302':
+          description: OIDC provider redirect or successful application redirect
+        '400':
+          description: Invalid/expired state or denied login
+        '401':
+          description: Invalid identity
+        '503':
+          description: Dependency unavailable
+components:
+  schemas:
+    Status:
+      type: object
+      required:
+      - service
+      - version
+      - mode
+      properties:
+        service:
+          const: api
+        version:
+          type: string
+        mode:
+          const: scaffold
+    Principal:
+      type: object
+      required:
+      - userId
+      - organizationId
+      - email
+      properties:
+        userId:
+          type: string
+        organizationId:
+          type: string
+        email:
+          type: string
+    NameInput:
+      type: object
+      additionalProperties: false
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+          description: No leading or trailing whitespace.
+    Project:
+      type: object
+      required:
+      - id
+      - name
+      - chainId
+      - createdAt
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        chainId:
+          type: integer
+          const: 1
+        createdAt:
+          type: string
+          format: date-time
+    Key:
+      type: object
+      required:
+      - id
+      - projectId
+      - name
+      - prefix
+      - createdAt
+      - expiresAt
+      - revokedAt
+      properties:
+        id:
+          type: string
+        projectId:
+          type: string
+        name:
+          type: string
+        prefix:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        revokedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+    IssuedKey:
+      type: object
+      required:
+      - key
+      - secret
+      properties:
+        key:
+          "$ref": "#/components/schemas/Key"
+        secret:
+          type: string
+          pattern: "^infra_sk_[a-f0-9]{64}$"
+          description: Returned once. Store securely; never log or embed in browser
+            applications.
+    KeyIdentity:
+      type: object
+      required:
+      - keyId
+      - projectId
+      - organizationId
+      - chainId
+      properties:
+        keyId:
+          type: string
+        projectId:
+          type: string
+        organizationId:
+          type: string
+        chainId:
+          const: 1
+          type: integer
+    OK:
+      type: object
+      required:
+      - ok
+      properties:
+        ok:
+          const: true
+    Error:
+      type: object
+      required:
+      - code
+      properties:
+        code:
+          type: string
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: infra_session
+    apiKey:
+      type: http
+      scheme: bearer
+      bearerFormat: infra_sk_<random token>
+  responses:
+    BadRequest:
+      description: Invalid input
+      content:
+        application/json:
+          schema:
+            "$ref": "#/components/schemas/Error"
+    Unauthenticated:
+      description: Unauthenticated
+      content:
+        application/json:
+          schema:
+            "$ref": "#/components/schemas/Error"
+    Forbidden:
+      description: Invalid origin
+      content:
+        application/json:
+          schema:
+            "$ref": "#/components/schemas/Error"
+    NotFound:
+      description: Missing or inaccessible resource
+      content:
+        application/json:
+          schema:
+            "$ref": "#/components/schemas/Error"
+    Unavailable:
+      description: Access unconfigured or dependency unavailable
+      content:
+        application/json:
+          schema:
+            "$ref": "#/components/schemas/Error"
