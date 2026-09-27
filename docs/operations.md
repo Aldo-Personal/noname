@@ -3,14 +3,16 @@
 ## Development
 
 GET /healthz is process liveness. GET /readyz is scaffold HTTP readiness; worker returns
-503 because it has no durable consumer. Gateway POST /rpc returns 503. No credentials
-or provider URLs are accepted yet. APP_ENV=production is deliberately rejected.
+503 because it has no durable consumer. Gateway POST /rpc returns 503. Access-enabled API readiness checks PostgreSQL.
+OIDC credentials and DATABASE_URL are read only on the server. APP_ENV=production
+is deliberately rejected. Keycloak fixture passwords are local-only.
 Docker Compose is local only, with loopback ports and disposable development credentials.
 `docker compose down` preserves PostgreSQL; deleting its volume destroys local data.
 
 ## Before enabling production
 
-- Implement tenant isolation, authentication, API-key rotation, quotas and audit events.
+- Tenant isolation, OIDC authentication and API-key rotation are implemented and tested.
+  Add production quotas, abuse controls, membership roles and audit events.
 - Replace scaffold readiness with dependency/consumer checks appropriate to each process.
 - Select and test durable queue/outbox, deduplication, crash recovery and dead letters.
 - Integrate durable metering and reconcile usage; define unavailable-dependency behavior.
@@ -19,7 +21,7 @@ Docker Compose is local only, with loopback ports and disposable development cre
 - Set numeric SLOs and recovery objectives based on measured workloads and budget.
 - Exercise restore from backup and compatible rollout/rollback in staging.
 - Run load tests with representative methods, payloads, concurrency and upstream failures.
-- Configure CI secret scanning, Go vulnerability scanning and immutable action/image pins.
+- Go vulnerability scanning is in CI. Configure secret scanning and immutable action/image pins.
 - Review payment-provider eligibility before enabling real billing.
 - Set real on-call/security contacts and branch protections in the hosting platform.
 
