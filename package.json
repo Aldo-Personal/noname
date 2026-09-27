@@ -13,6 +13,11 @@
     "dev": "npm run build -w @infra/sdk && npm run dev -w @infra/dashboard",
     "build": "npm run build -w @infra/sdk && npm run build -w @infra/dashboard",
     "typecheck": "npm run build -w @infra/sdk && npm run typecheck --workspaces",
-    "test": "npm run test -w @infra/sdk"
+    "test": "npm run test -w @infra/sdk",
+    "format": "prettier --write \"apps/**/*.{ts,tsx,css}\" \"packages/**/*.{ts,mjs}\" \"scripts/*.mjs\"",
+    "format:check": "prettier --check \"apps/**/*.{ts,tsx,css}\" \"packages/**/*.{ts,mjs}\" \"scripts/*.mjs\""
+  },
+  "devDependencies": {
+    "prettier": "3.9.9"
   }
 }
