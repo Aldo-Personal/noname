@@ -1,0 +1,21 @@
+openapi: 3.1.0
+info:
+  title: Infra API
+  version: 0.1.0
+paths:
+  /v1/status:
+    get:
+      operationId: getStatus
+      summary: Scaffold API status; not a production readiness guarantee
+      responses:
+        '200':
+          description: Status
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [service, version, mode]
+                properties:
+                  service: {type: string, const: api}
+                  version: {type: string}
+                  mode: {type: string, const: scaffold}
