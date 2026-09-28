@@ -17,3 +17,7 @@ architecture decisions under docs/decisions. User instructions take precedence.
 - Commit important verified changes separately with descriptive messages.
 - Track work in GitHub issues and link commits/PRs when access is available.
 - Main receives changes only by PR merge; do not push main directly.
+
+- Keep about five outcome-based issues ahead; see docs/roadmap.md.
+- One PR per milestone by default, with multiple tested checkpoint commits.
+- Preserve meaningful commits through rebase merges unless the user chooses squash.
