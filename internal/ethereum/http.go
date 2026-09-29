@@ -2,11 +2,16 @@ package ethereum
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"infra.local/platform/internal/usage"
 	"io"
+	"log/slog"
 	"mime"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,14 +22,21 @@ type Authenticator interface {
 	AuthenticateKey(context.Context, string) (access.KeyIdentity, error)
 }
 
-type Handler struct {
-	auth   Authenticator
-	client *Client
-	slots  chan struct{}
+type Meter interface {
+	Admit(context.Context, usage.Attempt) error
+	Finish(context.Context, string, string) error
 }
 
-func NewHandler(auth Authenticator, client *Client) *Handler {
-	return &Handler{auth: auth, client: client, slots: make(chan struct{}, 32)}
+type Handler struct {
+	meter   Meter
+	metrics metrics
+	auth    Authenticator
+	client  *Client
+	slots   chan struct{}
+}
+
+func NewHandler(auth Authenticator, client *Client, meter Meter) *Handler {
+	return &Handler{auth: auth, client: client, meter: meter, slots: make(chan struct{}, 32)}
 }
 
 func writeJSON(w http.ResponseWriter, status int, body any) {
@@ -50,6 +62,13 @@ func rpcFailure(w http.ResponseWriter, status int, id json.RawMessage, err *rpcE
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	started := time.Now()
+	observed := &observedWriter{ResponseWriter: w, status: 200}
+	w = observed
+	defer func() {
+		h.metrics.requests[observed.status/100].Add(1)
+		h.metrics.durationNS.Add(uint64(time.Since(started)))
+	}()
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", "POST")
 		failure(w, 405, "method_not_allowed")
@@ -110,7 +129,51 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		rpcFailure(w, 400, req.ID, invalid)
 		return
 	}
+	if h.meter == nil {
+		failure(w, 503, "accounting_unavailable")
+		return
+	}
+	var random [16]byte
+	if _, err := rand.Read(random[:]); err != nil {
+		failure(w, 503, "accounting_unavailable")
+		return
+	}
+	attemptID := hex.EncodeToString(random[:])
+	err = h.meter.Admit(ctx, usage.Attempt{ID: attemptID, OrganizationID: identity.OrganizationID, ProjectID: identity.ProjectID, KeyID: identity.KeyID, Method: req.Method})
+	if err != nil {
+		var limit *usage.Limited
+		switch {
+		case errors.As(err, &limit):
+			w.Header().Set("Retry-After", strconv.Itoa(limit.RetryAfter))
+			failure(w, 429, "project_limit_exceeded")
+		case errors.Is(err, usage.ErrKey):
+			failure(w, 401, "invalid_api_key")
+		default:
+			h.metrics.admissionErrors.Add(1)
+			failure(w, 503, "accounting_unavailable")
+		}
+		return
+	}
+	w.Header().Set("X-Usage-Attempt-ID", attemptID)
 	result, err := h.client.call(ctx, req)
+	outcome := "succeeded"
+	if err != nil {
+		outcome = "upstream_error"
+		if errors.Is(err, errTimeout) {
+			outcome = "timed_out"
+		}
+		if errors.Is(ctx.Err(), context.Canceled) {
+			outcome = "canceled"
+		}
+	}
+	finish, cancelFinish := context.WithTimeout(context.WithoutCancel(r.Context()), 2*time.Second)
+	finishErr := h.meter.Finish(finish, attemptID, outcome)
+	cancelFinish()
+	if finishErr != nil {
+		h.metrics.completionErrors.Add(1)
+		slog.Error("usage completion pending reconciliation", "attempt_id", attemptID)
+	}
+
 	if err != nil {
 		if errors.Is(err, errTimeout) {
 			rpcFailure(w, 504, req.ID, &rpcError{-32002, "Upstream timeout"})

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"infra.local/platform/internal/access"
+	"infra.local/platform/internal/usage"
 )
 
 type authFunc func(context.Context, string) (access.KeyIdentity, error)
@@ -46,7 +47,7 @@ func TestHandlerBoundary(t *testing.T) {
 		}
 		return access.KeyIdentity{}, access.ErrNotFound
 	})
-	h := NewHandler(auth, c)
+	h := NewHandler(auth, c, allowMeter{})
 	valid := `{"jsonrpc":"2.0","id":9007199254740993,"method":"eth_chainId","params":[]}`
 	for _, tt := range []struct {
 		name, key, body string
@@ -112,7 +113,7 @@ func TestCapacityBoundsAuthorization(t *testing.T) {
 		close(started)
 		<-release
 		return access.KeyIdentity{}, access.ErrNotFound
-	}), nil)
+	}), nil, allowMeter{})
 	h.slots = make(chan struct{}, 1)
 	r := func() *http.Request {
 		r := httptest.NewRequest("POST", "/rpc", nil)
@@ -131,3 +132,8 @@ func TestCapacityBoundsAuthorization(t *testing.T) {
 	release <- struct{}{}
 	<-done
 }
+
+type allowMeter struct{}
+
+func (allowMeter) Admit(context.Context, usage.Attempt) error   { return nil }
+func (allowMeter) Finish(context.Context, string, string) error { return nil }
