@@ -16,6 +16,7 @@ import (
 	"infra.local/platform/internal/access"
 	"infra.local/platform/internal/ethereum"
 	"infra.local/platform/internal/platform/database"
+	"infra.local/platform/internal/usage"
 )
 
 func TestPostgresKeyLifecycleThroughGateway(t *testing.T) {
@@ -81,7 +82,7 @@ func TestPostgresKeyLifecycleThroughGateway(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer client.Close()
-	h := ethereum.NewHandler(s, client)
+	h := ethereum.NewHandler(s, client, &usage.Store{Pool: pool})
 	check := func(secret string, status int) {
 		t.Helper()
 		before := calls.Load()

@@ -21,6 +21,7 @@ import (
 	"infra.local/platform/internal/access"
 	"infra.local/platform/internal/ethereum"
 	"infra.local/platform/internal/platform/database"
+	"infra.local/platform/internal/usage"
 )
 
 // Version is overridden at release build time.
@@ -82,6 +83,11 @@ func handlerWithRoutes(service string, ready *atomic.Bool, routes http.Handler, 
 			})
 		}
 		mux.Handle("POST /rpc", routes)
+		if metrics, ok := routes.(interface {
+			Metrics(http.ResponseWriter, *http.Request)
+		}); ok {
+			mux.HandleFunc("GET /metrics", metrics.Metrics)
+		}
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := make([]byte, 16)
@@ -177,7 +183,7 @@ func Run(service string) error {
 			return err
 		}
 		defer client.Close()
-		routes = ethereum.NewHandler(&access.Store{Pool: pool}, client)
+		routes = ethereum.NewHandler(&access.Store{Pool: pool}, client, &usage.Store{Pool: pool})
 		dependencyReady = pool.Ping
 	}
 	var ready atomic.Bool
