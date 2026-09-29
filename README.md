@@ -1,8 +1,8 @@
 # Infra
 
 Nigeria-first developer infrastructure, starting with Ethereum mainnet (chain ID 1).
-Development milestone: OIDC sign-in, personal organizations, projects, and API keys.
-RPC forwarding, transactions, wallets and billing are not enabled. Production startup
+Development milestones: OIDC sign-in, organizations/projects, API keys and optional
+read-only Ethereum RPC forwarding. Transactions, wallets and billing are not enabled. Production startup
 remains blocked until the safeguards in docs/operations.md are implemented.
 
 ## Local setup
@@ -41,6 +41,13 @@ Do not put server API keys into browser applications or source control.
 Local Keycloak admin: http://localhost:8090/admin, user `local-admin`, password
 `local-admin-development-only`. Realm changes are imported only when the realm does
 not exist; editing dev/keycloak/realm.json does not overwrite an existing realm.
+
+## Ethereum gateway
+
+With DATABASE_URL exported, set ETHEREUM_RPC_URL to your server-side Ethereum mainnet
+provider endpoint and run `make gateway`. Forwarding is disabled without that setting.
+See [the gateway guide](docs/ethereum-rpc.md) for supported methods, SDK usage, limits,
+errors and live verification. Automated tests use local provider fixtures.
 
 ## Ports and existing services
 
@@ -83,20 +90,21 @@ OIDC identities, PKCE, replay, CSRF, tenant boundaries, sessions, key expiry and
 
 - `cmd/api`, `cmd/gateway`, `cmd/worker`: Go service entry points.
 - `cmd/migrate`: explicit migration entry point.
+- `internal/ethereum`: JSON-RPC validation, upstream adapter and authenticated gateway.
 - `internal/access`: identity, organization/project/key persistence and HTTP handlers.
 - `internal/platform/database`: PostgreSQL pool and embedded versioned migrations.
 - `internal/platform/server`: configuration, lifecycle, routing, readiness and shutdown.
 - `apps/dashboard`: React/Vite console; `src/main.tsx` is the browser entry point.
 - `packages/sdk`: TypeScript client with Zod runtime response validation.
-- `api/openapi.yaml`: API contract, including browser-session and bearer-key routes.
+- `api/openapi.yaml`: management API contract; `api/gateway.openapi.yaml`: RPC contract.
 - `dev/keycloak`: local OIDC fixture; `docs`: decisions, policies, and operations.
 
 The dashboard depends on the compiled SDK. Rebuild it after SDK edits:
 `npm run build -w @infra/sdk`. Status remains `/v1/status`. Access routes require the
 database and OIDC configuration; without it they return 503. With access enabled,
-readiness checks PostgreSQL. Gateway `/rpc` and worker readiness still return 503.
+readiness checks PostgreSQL. Gateway `/rpc` returns 503 until configured; worker readiness still returns 503.
 
-Keys currently authorize only `GET /v1/key-check`, using `Authorization: Bearer <key>`.
+Keys authorize `GET /v1/key-check` and configured gateway `POST /rpc`, using `Authorization: Bearer <key>`.
 They expire after 90 days. Session routes require an HttpOnly cookie; writes also require
 the configured Origin. Raw keys appear only on creation/rotation. List endpoints show
 the newest 100 records. Team invitations, pagination, production abuse controls and
@@ -109,7 +117,7 @@ issues, and commit coherent verified milestones. Local hooks enforce the main re
 GitHub main protection requires a PR, up-to-date passing verify CI, resolved conversations,
 and linear history; administrators are included. Force pushes/deletion are disabled.
 Independent approvals are currently optional for the solo-maintainer workflow. Current milestone:
-https://github.com/Aldo-Personal/noname/issues/7.
+https://github.com/Aldo-Personal/noname/issues/9. See [the next five milestones](docs/roadmap.md).
 
 The local Go module path and private npm scope are placeholders for future publishing.
 No package publication or production deployment is configured. See CONTRIBUTING.md,

@@ -138,3 +138,6 @@ export class InfraClient {
     };
   }
 }
+
+export { EthereumClient, EthereumError } from "./ethereum.js";
+export type { BlockReference, TransactionReceipt } from "./ethereum.js";

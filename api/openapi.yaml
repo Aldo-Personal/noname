@@ -3,8 +3,8 @@ openapi: 3.1.0
 info:
   title: Infra API
   version: 0.1.0
-  description: Development Ethereum access milestone. Keys authorize only key-check;
-    RPC forwarding remains disabled.
+  description: Development Ethereum management API. Keys also authorize the separate
+    configured gateway; see gateway.openapi.yaml.
 paths:
   "/v1/status":
     get:

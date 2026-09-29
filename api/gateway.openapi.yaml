@@ -1,0 +1,108 @@
+openapi: 3.1.0
+info:
+  title: Infra Ethereum Gateway
+  version: 0.1.0
+  description: Development-only read gateway. See docs/ethereum-rpc.md for method-specific validation and limits.
+servers:
+  - url: http://127.0.0.1:8081
+paths:
+  /rpc:
+    post:
+      operationId: ethereumRead
+      security:
+        - projectKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Request'
+      responses:
+        '200':
+          description: Successful Ethereum result, preserving the caller ID.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [jsonrpc, id, result]
+                properties:
+                  jsonrpc:
+                    const: '2.0'
+                  id:
+                    $ref: '#/components/schemas/ID'
+                  result:
+                    type: [string, object, 'null']
+        '400':
+          $ref: '#/components/responses/Failure'
+        '401':
+          $ref: '#/components/responses/Failure'
+        '403':
+          $ref: '#/components/responses/Failure'
+        '413':
+          $ref: '#/components/responses/Failure'
+        '415':
+          $ref: '#/components/responses/Failure'
+        '502':
+          $ref: '#/components/responses/Failure'
+        '503':
+          $ref: '#/components/responses/Failure'
+        '504':
+          $ref: '#/components/responses/Failure'
+components:
+  securitySchemes:
+    projectKey:
+      type: http
+      scheme: bearer
+      description: Server-only project key. Sessions and cookies cannot authorize RPC.
+  schemas:
+    ID:
+      type: [string, integer]
+      description: Required non-null ID; maximum 128 encoded JSON bytes. Fractional/exponent numeric representations rejected.
+    Request:
+      type: object
+      additionalProperties: false
+      required: [jsonrpc, id, method]
+      description: Maximum 16 KiB. No batches, notifications, duplicate fields or compressed bodies. Method-specific parameter constraints are documented in docs/ethereum-rpc.md.
+      properties:
+        jsonrpc:
+          const: '2.0'
+        id:
+          $ref: '#/components/schemas/ID'
+        method:
+          enum: [eth_chainId, eth_blockNumber, eth_getBalance, eth_getCode, eth_getTransactionReceipt]
+        params:
+          type: array
+          maxItems: 2
+          items:
+            type: string
+    Failure:
+      oneOf:
+        - type: object
+          required: [code]
+          properties:
+            code:
+              type: string
+        - type: object
+          required: [jsonrpc, id, error]
+          properties:
+            jsonrpc:
+              const: '2.0'
+            id:
+              type: [string, integer, 'null']
+            error:
+              type: object
+              required: [code, message]
+              properties:
+                code:
+                  type: integer
+                  enum: [-32700, -32600, -32601, -32602, -32001, -32002]
+                message:
+                  type: string
+  responses:
+    Failure:
+      description: See docs/ethereum-rpc.md for HTTP/code mapping. Provider messages and headers are never relayed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Failure'
