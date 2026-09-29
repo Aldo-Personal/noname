@@ -72,7 +72,7 @@ func (s *Store) Admit(ctx context.Context, a Attempt) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(context.Background())
+	defer rollback(tx)
 	if err := ensure(ctx, tx, a.OrganizationID, a.ProjectID); err != nil {
 		return err
 	}
@@ -143,7 +143,7 @@ func (s *Store) Finish(ctx context.Context, id, outcome string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(context.Background())
+	defer rollback(tx)
 	var project, old string
 	var day time.Time
 	err = tx.QueryRow(ctx, `SELECT project_id,day,outcome FROM usage_attempts WHERE id=$1 FOR UPDATE`, id).Scan(&project, &day, &old)
@@ -174,7 +174,7 @@ func (s *Store) SetLimits(ctx context.Context, org, project string, limits Limit
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(context.Background())
+	defer rollback(tx)
 	if err := ensure(ctx, tx, org, project); err != nil {
 		return err
 	}
@@ -190,7 +190,7 @@ func (s *Store) Summary(ctx context.Context, org, project string) (Summary, erro
 	if err != nil {
 		return result, err
 	}
-	defer tx.Rollback(context.Background())
+	defer rollback(tx)
 	var now time.Time
 	err = tx.QueryRow(ctx, `SELECT COALESCE(l.daily_units,10000),COALESCE(l.minute_requests,60),clock_timestamp() FROM projects p LEFT JOIN project_limits l ON l.project_id=p.id WHERE p.id=$1 AND p.organization_id=$2`, project, org).Scan(&result.Limits.DailyUnits, &result.Limits.MinuteRequests, &now)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -254,4 +254,10 @@ func (s *Store) Maintain(ctx context.Context) (int, error) {
 	}
 	_, err = s.Pool.Exec(ctx, `DELETE FROM usage_days WHERE (project_id,day) IN (SELECT d.project_id,d.day FROM usage_days d WHERE day<(clock_timestamp() AT TIME ZONE 'UTC')::date-365 AND NOT EXISTS(SELECT 1 FROM usage_attempts a WHERE a.project_id=d.project_id AND a.day=d.day) ORDER BY day LIMIT 1000)`)
 	return len(ids), err
+}
+
+func rollback(tx pgx.Tx) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	_ = tx.Rollback(ctx)
 }
