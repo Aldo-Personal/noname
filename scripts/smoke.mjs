@@ -23,6 +23,7 @@ try {
         ...process.env,
         APP_ENV: "test",
         DATABASE_URL: "",
+        ETHEREUM_RPC_URL: "",
         OIDC_ISSUER: "",
         OIDC_CLIENT_ID: "",
         PUBLIC_ORIGIN: "",

@@ -1,7 +1,10 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync/atomic"
@@ -61,5 +64,31 @@ func TestConfig(t *testing.T) {
 	addr, err := Address("api")
 	if err != nil || addr != "127.0.0.1:8080" {
 		t.Fatalf("%s %v", addr, err)
+	}
+}
+
+func TestGatewayRoutesAndDependencyReadiness(t *testing.T) {
+	var ready atomic.Bool
+	ready.Store(true)
+	calls := 0
+	routes := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		JSON(w, 200, map[string]string{"result": "mounted"})
+	})
+	h := handlerWithRoutes("gateway", &ready, routes, func(context.Context) error { return errors.New("offline") })
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest("POST", "/rpc", strings.NewReader(`{}`)))
+	if w.Code != 200 || calls != 1 {
+		t.Fatal("configured RPC route not mounted")
+	}
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest("GET", "/rpc", nil))
+	if w.Code != 405 || calls != 1 {
+		t.Fatal("GET forwarded")
+	}
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest("GET", "/readyz", nil))
+	if w.Code != 503 {
+		t.Fatal("database outage reported ready")
 	}
 }

@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"infra.local/platform/internal/access"
+	"infra.local/platform/internal/ethereum"
 	"infra.local/platform/internal/platform/database"
 )
 
@@ -41,10 +42,10 @@ func JSON(w http.ResponseWriter, code int, value any) {
 
 // Handler exposes scaffold diagnostics; Run mounts access routes when configured.
 func Handler(service string, ready *atomic.Bool) http.Handler {
-	return handlerWithAccess(service, ready, nil, nil)
+	return handlerWithRoutes(service, ready, nil, nil)
 }
 
-func handlerWithAccess(service string, ready *atomic.Bool, routes http.Handler, dependencyReady func(context.Context) error) http.Handler {
+func handlerWithRoutes(service string, ready *atomic.Bool, routes http.Handler, dependencyReady func(context.Context) error) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		JSON(w, http.StatusOK, map[string]string{"status": "alive"})
@@ -75,9 +76,12 @@ func handlerWithAccess(service string, ready *atomic.Bool, routes http.Handler, 
 		})
 	}
 	if service == "gateway" {
-		mux.HandleFunc("POST /rpc", func(w http.ResponseWriter, r *http.Request) {
-			JSON(w, http.StatusServiceUnavailable, map[string]string{"code": "not_configured", "message": "RPC forwarding is not enabled."})
-		})
+		if routes == nil {
+			routes = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				JSON(w, http.StatusServiceUnavailable, map[string]string{"code": "not_configured", "message": "RPC forwarding is not enabled."})
+			})
+		}
+		mux.Handle("POST /rpc", routes)
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := make([]byte, 16)
@@ -154,10 +158,32 @@ func Run(service string) error {
 			dependencyReady = pool.Ping
 		}
 	}
+	if service == "gateway" && os.Getenv("ETHEREUM_RPC_URL") != "" {
+		if os.Getenv("DATABASE_URL") == "" {
+			return fmt.Errorf("DATABASE_URL is required for RPC authorization")
+		}
+		startup, cancel := context.WithTimeout(ctx, 20*time.Second)
+		defer cancel()
+		pool, err := database.Open(startup, os.Getenv("DATABASE_URL"))
+		if err != nil {
+			return err
+		}
+		defer pool.Close()
+		if err := database.Check(startup, pool); err != nil {
+			return err
+		}
+		client, err := ethereum.NewClient(startup, os.Getenv("ETHEREUM_RPC_URL"))
+		if err != nil {
+			return err
+		}
+		defer client.Close()
+		routes = ethereum.NewHandler(&access.Store{Pool: pool}, client)
+		dependencyReady = pool.Ping
+	}
 	var ready atomic.Bool
 	// The worker has no durable queue adapter yet and must not advertise readiness.
 	ready.Store(service != "worker")
-	srv := &http.Server{Addr: addr, Handler: handlerWithAccess(service, &ready, routes, dependencyReady), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 32 << 10}
+	srv := &http.Server{Addr: addr, Handler: handlerWithRoutes(service, &ready, routes, dependencyReady), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 32 << 10}
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return fmt.Errorf("listen: %w", err)

@@ -40,4 +40,4 @@ migrate:
 	go run ./cmd/migrate
 integration:
 	test -n "$$TEST_DATABASE_URL"
-	go test -race -count=1 ./internal/access ./internal/platform/database
+	go test -race -count=1 ./internal/access ./internal/ethereum ./internal/platform/database

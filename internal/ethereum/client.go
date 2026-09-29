@@ -57,7 +57,7 @@ func NewClient(ctx context.Context, endpoint string) (*Client, error) {
 
 func (c *Client) Close() { c.http.CloseIdleConnections() }
 
-// Check verifies both liveness and chain ID; it is also used by configured readiness.
+// Check verifies both liveness and chain ID during startup.
 func (c *Client) Check(ctx context.Context) error {
 	_, err := c.call(ctx, request{JSONRPC: "2.0", ID: json.RawMessage(`1`), Method: "eth_chainId", Params: []json.RawMessage{}})
 	return err
