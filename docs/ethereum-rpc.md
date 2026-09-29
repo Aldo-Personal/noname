@@ -84,8 +84,9 @@ have the shared server's 15-second deadlines. These limits are fixed defaults, n
 | 403 | code unsupported_chain |
 | 405 | Non-POST method |
 | 413 / 415 | code request_too_large / unsupported_media_type |
+| 429 | code project_limit_exceeded; Retry-After identifies the window reset |
 | 502 | JSON-RPC -32001 Upstream unavailable (includes provider HTTP/RPC errors and invalid/oversized results) |
-| 503 | code not_configured, gateway_busy or authorization_unavailable |
+| 503 | code not_configured, gateway_busy, accounting_unavailable or authorization_unavailable |
 | 504 | JSON-RPC -32002 Upstream timeout |
 
 Do not depend on provider-specific error text: it is deliberately removed along with
@@ -106,7 +107,7 @@ After configuring a real provider, verify chainId/blockNumber and a known balanc
 then rotate/revoke a disposable project key and verify it receives 401. That live smoke
 test is an operator prerequisite; fixture tests do not measure production capacity.
 
-Disable forwarding by removing ETHEREUM_RPC_URL and restarting the gateway. Rollback
-requires no database repair because this milestone adds no schema or durable side effects.
-Keep the management API running for key revocation. Usage accounting and distributed
-quotas are #10; do not enable public production before the operations gate is satisfied.
+Disable forwarding by removing ETHEREUM_RPC_URL and restarting the gateway. For rollback, keep applied migrations and disable forwarding before reverting accounting
+binaries; see usage-accounting.md.
+Keep the management API running for key revocation. Shared project quotas and durable usage are implemented in #10; see usage-accounting.md.
+Do not enable public production before the operations gate is satisfied.

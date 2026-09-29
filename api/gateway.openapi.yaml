@@ -43,6 +43,8 @@ paths:
           $ref: '#/components/responses/Failure'
         '415':
           $ref: '#/components/responses/Failure'
+        '429':
+          $ref: '#/components/responses/Failure'
         '502':
           $ref: '#/components/responses/Failure'
         '503':
