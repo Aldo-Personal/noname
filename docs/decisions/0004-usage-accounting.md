@@ -33,7 +33,8 @@ remains, an operational error counter/log is emitted, and reconciliation marks i
 Do not replay unknown requests or refund uncertain consumption automatically.
 
 The bounded maintenance command marks pending attempts older than 30 seconds unknown.
-Gateway operation deadline is 10 seconds, followed by at most 2 seconds for completion.
+Gateway operation deadline is 10 seconds, followed by a 2-second completion context
+and at most 2 seconds of rollback cleanup if needed.
 After a terminal outcome, later completion is a no-op; unknown cannot silently become
 success. Daily aggregates remain reconstructable from retained attempts. Retain terminal
 attempts 30 days and aggregates 365 days; delete only in bounded batches, never pending

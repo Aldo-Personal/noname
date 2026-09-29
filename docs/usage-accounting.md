@@ -100,3 +100,6 @@ Rollback: disable forwarding first, keep migration 0002, then roll back binaries
 Never drop the usage tables or revert to an unmetered gateway while forwarding stays on.
 Future schema changes require new migrations. Keep production startup blocked until the
 operations gate, realistic load tests and provider commercial terms are satisfied.
+
+See [the reproducible workload and measured results](usage-load-test.md) for local
+verification and the limits of those measurements.
