@@ -3,7 +3,10 @@
 ## Development
 
 GET /healthz is process liveness. GET /readyz is scaffold HTTP readiness; worker returns
-503 because it has no durable consumer. Gateway POST /rpc returns 503. Access-enabled API readiness checks PostgreSQL.
+503 because it has no durable consumer. Gateway POST /rpc returns 503 unless ETHEREUM_RPC_URL
+and DATABASE_URL enable forwarding. Access-enabled API and configured gateway readiness
+check PostgreSQL. Gateway startup verifies mainnet; readiness does not continuously probe
+the upstream. See ethereum-rpc.md for limits, failure responses and disable/rollback steps.
 OIDC credentials and DATABASE_URL are read only on the server. APP_ENV=production
 is deliberately rejected. Keycloak fixture passwords are local-only.
 Docker Compose is local only, with loopback ports and disposable development credentials.
