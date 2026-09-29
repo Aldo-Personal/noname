@@ -114,6 +114,7 @@ func (a *App) authorized(fn func(http.ResponseWriter, *http.Request, Principal))
 }
 func (a *App) Routes() http.Handler {
 	mux := http.NewServeMux()
+	a.usageRoutes(mux)
 	mux.HandleFunc("GET /auth/login", a.login)
 	mux.HandleFunc("GET /auth/callback", a.callback)
 	mux.HandleFunc("POST /auth/logout", a.authorized(func(w http.ResponseWriter, r *http.Request, p Principal) {

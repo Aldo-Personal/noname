@@ -341,6 +341,70 @@ paths:
           description: Invalid identity
         '503':
           description: Dependency unavailable
+  "/v1/projects/{project}/usage":
+    get:
+      security:
+      - session: []
+      parameters:
+      - name: project
+        in: path
+        required: true
+        schema:
+          type: string
+      operationId: getProjectUsage
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ProjectUsage"
+        '400':
+          "$ref": "#/components/responses/BadRequest"
+        '401':
+          "$ref": "#/components/responses/Unauthenticated"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '503':
+          "$ref": "#/components/responses/Unavailable"
+  "/v1/projects/{project}/limits":
+    put:
+      security:
+      - session: []
+      parameters:
+      - name: project
+        in: path
+        required: true
+        schema:
+          type: string
+      operationId: setProjectLimits
+      description: Requires the configured Origin. Changing limits preserves consumed
+        usage.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/ProjectLimits"
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ProjectLimits"
+        '400':
+          "$ref": "#/components/responses/BadRequest"
+        '401':
+          "$ref": "#/components/responses/Unauthenticated"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '503':
+          "$ref": "#/components/responses/Unavailable"
 components:
   schemas:
     Status:
@@ -472,6 +536,89 @@ components:
       properties:
         code:
           type: string
+    ProjectLimits:
+      type: object
+      additionalProperties: false
+      required:
+      - dailyUnits
+      - minuteRequests
+      properties:
+        dailyUnits:
+          type: integer
+          minimum: 0
+          maximum: 100000
+        minuteRequests:
+          type: integer
+          minimum: 0
+          maximum: 600
+    ProjectUsage:
+      type: object
+      required:
+      - limits
+      - usedUnits
+      - remainingUnits
+      - resetsAt
+      - days
+      properties:
+        limits:
+          "$ref": "#/components/schemas/ProjectLimits"
+        usedUnits:
+          type: integer
+          minimum: 0
+          maximum: 100000
+        remainingUnits:
+          type: integer
+          minimum: 0
+          maximum: 100000
+        resetsAt:
+          type: string
+          format: date-time
+        days:
+          type: array
+          maxItems: 7
+          items:
+            type: object
+            required:
+            - units
+            - pending
+            - succeeded
+            - upstreamError
+            - timedOut
+            - canceled
+            - unknown
+            - day
+            properties:
+              units:
+                type: integer
+                minimum: 0
+                maximum: 100000
+              pending:
+                type: integer
+                minimum: 0
+                maximum: 100000
+              succeeded:
+                type: integer
+                minimum: 0
+                maximum: 100000
+              upstreamError:
+                type: integer
+                minimum: 0
+                maximum: 100000
+              timedOut:
+                type: integer
+                minimum: 0
+                maximum: 100000
+              canceled:
+                type: integer
+                minimum: 0
+                maximum: 100000
+              unknown:
+                type: integer
+                minimum: 0
+                maximum: 100000
+              day:
+                type: string
+                format: date
   securitySchemes:
     session:
       type: apiKey

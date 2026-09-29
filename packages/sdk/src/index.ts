@@ -42,6 +42,34 @@ export type APIKey = z.infer<typeof KeySchema>;
 export type IssuedKey = z.infer<typeof IssuedKeySchema>;
 export type KeyIdentity = z.infer<typeof KeyIdentitySchema>;
 
+export const ProjectLimitsSchema = z.object({
+  dailyUnits: z.number().int().min(0).max(100000),
+  minuteRequests: z.number().int().min(0).max(600),
+});
+const Units = z.number().int().nonnegative().safe();
+const ProjectUsageSchema = z.object({
+  limits: ProjectLimitsSchema,
+  usedUnits: Units,
+  remainingUnits: Units,
+  resetsAt: z.string().datetime({ offset: true }),
+  days: z
+    .array(
+      z.object({
+        day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        units: Units,
+        pending: Units,
+        succeeded: Units,
+        upstreamError: Units,
+        timedOut: Units,
+        canceled: Units,
+        unknown: Units,
+      }),
+    )
+    .max(7),
+});
+export type ProjectLimits = z.infer<typeof ProjectLimitsSchema>;
+export type ProjectUsage = z.infer<typeof ProjectUsageSchema>;
+
 export class InfraError extends Error {
   constructor(
     public readonly status: number,
@@ -125,6 +153,21 @@ export class InfraClient {
   checkKey(secret: string): Promise<KeyIdentity> {
     return this.request("/v1/key-check", KeyIdentitySchema, {
       headers: { Authorization: `Bearer ${secret}` },
+    });
+  }
+  usage(project: string, signal?: AbortSignal): Promise<ProjectUsage> {
+    return this.request(
+      `/v1/projects/${encodeURIComponent(project)}/usage`,
+      ProjectUsageSchema,
+      {},
+      signal,
+    );
+  }
+  setLimits(project: string, limits: ProjectLimits): Promise<ProjectLimits> {
+    const validated = ProjectLimitsSchema.parse(limits);
+    return this.request(`/v1/projects/${encodeURIComponent(project)}/limits`, ProjectLimitsSchema, {
+      ...this.json(validated),
+      method: "PUT",
     });
   }
   logout(): Promise<{ ok: true }> {

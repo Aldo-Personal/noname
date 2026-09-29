@@ -8,14 +8,14 @@ Customer SDKs --------------------> Gateway -> configured Ethereum provider
 API -> PostgreSQL/outbox -> durable queue -> Workers (planned)
 ```
 
-API owns the control plane. Gateway owns authenticated provider access; durable metering is next (#10).
+API owns the control plane. Gateway owns authenticated provider access; durable admission accounting and limits use PostgreSQL (#10).
 Workers own asynchronous delivery and reconciliation. Separate binaries allow
 independent scaling while keeping one codebase. No broker is selected yet.
 
 Implemented: OIDC sessions, personal organizations, Ethereum projects, API-key lifecycle
-and bounded five-method read-only RPC. See decisions/0003-ethereum-rpc.md and ethereum-rpc.md.
+and bounded five-method read-only RPC with durable reservations and shared quotas. See decisions/0003-ethereum-rpc.md and ethereum-rpc.md.
 Planned capabilities: team membership, contracts, transactions, events/webhooks,
-usage, billing. Each owns its writes; no module may bypass another's invariants.
+billing. Each owns its writes; no module may bypass another's invariants.
 Usage is durable accounting input, not just a metrics counter. Redis is optional
 ephemeral infrastructure, never the sole authority for balances or billing.
 

@@ -2,7 +2,7 @@
 
 Nigeria-first developer infrastructure, starting with Ethereum mainnet (chain ID 1).
 Development milestones: OIDC sign-in, organizations/projects, API keys and optional
-read-only Ethereum RPC forwarding. Transactions, wallets and billing are not enabled. Production startup
+read-only Ethereum RPC forwarding with shared project limits and durable usage. Transactions, wallets and billing are not enabled. Production startup
 remains blocked until the safeguards in docs/operations.md are implemented.
 
 ## Local setup
@@ -48,6 +48,8 @@ With DATABASE_URL exported, set ETHEREUM_RPC_URL to your server-side Ethereum ma
 provider endpoint and run `make gateway`. Forwarding is disabled without that setting.
 See [the gateway guide](docs/ethereum-rpc.md) for supported methods, SDK usage, limits,
 errors and live verification. Automated tests use local provider fixtures.
+See [usage accounting](docs/usage-accounting.md) for limits, migration/rollout order,
+metrics and the required maintenance schedule.
 
 ## Ports and existing services
 
@@ -90,6 +92,8 @@ OIDC identities, PKCE, replay, CSRF, tenant boundaries, sessions, key expiry and
 
 - `cmd/api`, `cmd/gateway`, `cmd/worker`: Go service entry points.
 - `cmd/migrate`: explicit migration entry point.
+- `internal/usage`: shared budgets, attempt records, daily aggregates and bounded recovery.
+- `cmd/usage-maintenance`: one reconciliation/retention pass; schedule it for sustained use.
 - `internal/ethereum`: JSON-RPC validation, upstream adapter and authenticated gateway.
 - `internal/access`: identity, organization/project/key persistence and HTTP handlers.
 - `internal/platform/database`: PostgreSQL pool and embedded versioned migrations.
@@ -117,7 +121,7 @@ issues, and commit coherent verified milestones. Local hooks enforce the main re
 GitHub main protection requires a PR, up-to-date passing verify CI, resolved conversations,
 and linear history; administrators are included. Force pushes/deletion are disabled.
 Independent approvals are currently optional for the solo-maintainer workflow. Current milestone:
-https://github.com/Aldo-Personal/noname/issues/9. See [the next five milestones](docs/roadmap.md).
+https://github.com/Aldo-Personal/noname/issues/10. See [the next five milestones](docs/roadmap.md).
 
 The local Go module path and private npm scope are placeholders for future publishing.
 No package publication or production deployment is configured. See CONTRIBUTING.md,

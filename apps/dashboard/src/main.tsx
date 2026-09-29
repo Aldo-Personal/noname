@@ -9,6 +9,7 @@ import {
   type IssuedKey,
 } from "@infra/sdk";
 import "./style.css";
+import { UsagePanel } from "./usage";
 
 const client = new InfraClient("");
 const date = (value: string) => new Date(value).toLocaleDateString();
@@ -231,6 +232,7 @@ function App() {
                     <span className="badge">Chain ID 1</span>
                   </div>
                   <p className="mono muted">{current.id}</p>
+                  <UsagePanel key={current.id} project={current.id} />
                   <h3>Server API keys</h3>
                   <p className="muted">
                     Keys expire after 90 days. Keep them on your server; never ship them in browser
@@ -406,7 +408,8 @@ function App() {
         </>
       )}
       <footer>
-        Development access milestone · RPC forwarding, transactions, and billing are not enabled.
+        Development environment · Ethereum reads require a configured provider. Billing is not
+        enabled.
       </footer>
     </main>
   );

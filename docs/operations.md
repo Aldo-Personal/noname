@@ -18,7 +18,8 @@ Docker Compose is local only, with loopback ports and disposable development cre
   Add production quotas, abuse controls, membership roles and audit events.
 - Replace scaffold readiness with dependency/consumer checks appropriate to each process.
 - Select and test durable queue/outbox, deduplication, crash recovery and dead letters.
-- Integrate durable metering and reconcile usage; define unavailable-dependency behavior.
+- Usage admission now fails closed on database errors. Schedule bounded usage maintenance;
+  monitor pending age/completion failures and validate recovery. See usage-accounting.md.
 - Configure secret storage, TLS/ingress, least-privilege network/database access.
 - Add metrics/traces: latency, errors, saturation, upstream health, queue age and billing lag.
 - Set numeric SLOs and recovery objectives based on measured workloads and budget.
